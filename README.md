@@ -15,26 +15,61 @@
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- Poetry (dependency management tool)
+- Python 3.12
+- Conda
 
 ### Steps
 
-1. **Clone the repository**:
+#### 1. **Clone the repository**:
    ```bash
    git clone https://github.com/jeanjerome/EchoInStone.git
    cd EchoInStone
    ```
 
-2. **Install dependencies using Poetry**:
+#### **2. Setting up the environment and installing dependencies**
+
+On macOS, some dependencies like `librosa` can be difficult to install directly with Poetry due to compatibility issues with low-level libraries (e.g., `llvmlite`, `numba`). To ensure a smooth installation, we use **Conda** to manage system-level dependencies and let **Poetry** handle the rest.
+
+##### **🔹 Step-by-step setup**
+1. **Create a Conda environment and install Python**  
+   We create a Conda environment named `echoinstone` with Python 3.12:  
+   ```bash
+   conda create -n echoinstone python=3.12 -y
+   conda activate echoinstone
+   ```
+
+2. **Install system-critical dependencies via Conda**  
+   Some packages, like `librosa`, rely on compiled libraries that Conda manages more efficiently than Poetry:  
+   ```bash
+   conda install -c conda-forge librosa
+   conda install -c conda-forge numba
+   ```
+
+3. **Install Poetry inside the Conda environment**  
+   Poetry will be used to manage all other dependencies:  
+   ```bash
+   pip install poetry
+   ```
+
+4. **Disable Poetry's virtual environment creation**  
+   Since we're using Conda as our environment manager, we tell Poetry **not to create its own virtual environment**:  
+   ```bash
+   poetry config virtualenvs.create false
+   ```
+
+5. **Install the remaining dependencies with Poetry**  
+   Finally, install all project dependencies using Poetry:  
    ```bash
    poetry install
    ```
 
-3. **Configure logging** (optional):
+> ✅ **With this setup, Conda efficiently handles system-dependent packages, while Poetry manages Python dependencies in a clean and structured way.**  
+> 🚀 **This approach prevents installation conflicts and ensures cross-platform compatibility.**  
+
+#### **3. Configure logging** (optional):
    - The logging configuration is set up to output logs to both the console and a file (`app.log`). You can modify the logging settings in `logging_config.py`.
 
-4. **Configure Hugging Face Token**:
+#### **4. Configure Hugging Face Token**:
 
   - Add your Hugging Face token to this file. You can obtain a token by following these steps:
      1. Go to [Hugging Face Settings](https://huggingface.co/settings/tokens).
@@ -52,24 +87,32 @@ HUGGING_FACE_TOKEN = "your_token_here"
 
 ### Basic Example
 
-To transcribe and diarize a YouTube video, you can run the following command:
+Run the application inside the Conda environment:
 
 ```bash
-poetry run python main.py <audio_input_url>
+conda activate echoinstone
+python main.py <audio_source>
 ```
 
-- `<audio_input_url>`: The URL of the audio input (YouTube, podcast, or direct audio file).
+Or, if you prefer to explicitly use Poetry:
+
+```bash
+conda activate echoinstone
+poetry run python main.py <audio_source>
+```
+
+- `<audio_source>`: The URL of the audio input (YouTube, podcast, direct audio file, or local file path).
 
 ### Command-Line Arguments
 
-- **`--output_dir`**: Directory to save the output files. Default is `"results"`.
+- **`--save_dir`**: Directory to save the output files. Default is `"results"`.
   ```bash
-  poetry run python main.py <audio_input_url> --output_dir <output_directory>
+  poetry run python main.py <audio_source> --save_dir <output_directory>
   ```
 
-- **`--transcription_output`**: Filename for the transcription output. Default is `"speaker_transcriptions.json"`.
+- **`--transcript_file`**: Filename for the transcription output. Default is `"speaker_transcriptions.json"`.
   ```bash
-  poetry run python main.py <audio_input_url> --transcription_output <output_filename>
+  poetry run python main.py <audio_source> --transcript_file <output_filename>
   ```
 
 ### Examples
@@ -87,6 +130,11 @@ poetry run python main.py <audio_input_url>
 - **Transcribe and diarize a direct MP3 file**:
   ```bash
   poetry run python main.py "https://media.radiofrance-podcast.net/podcast09/25425-13.02.2025-ITEMA_24028677-2025C53905E0006-NET_MFC_D378B90D-D570-44E9-AB5A-F0CC63B05A14-21.mp3"
+  ```
+
+- **Transcribe and diarize a local audio file**:
+  ```bash
+  poetry run python main.py "/path/to/local/audio.wav"
   ```
 
 ## Testing

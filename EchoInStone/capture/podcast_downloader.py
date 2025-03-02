@@ -1,7 +1,7 @@
 import feedparser
 import requests
 import logging
-from ..capture import DownloaderInterface
+from EchoInStone.capture import DownloaderInterface
 import re
 
 logger = logging.getLogger(__name__)

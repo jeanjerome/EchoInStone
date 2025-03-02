@@ -32,9 +32,9 @@ def configure_logging(log_level=logging.INFO):
         logger.addHandler(file_handler)
 
     # Reduce log verbosity for external libraries to avoid noise
-    # external_loggers = ["urllib3", "pytubefix", "fsspec", "pydub"]
-    # for ext_logger in external_loggers:
-    #     logging.getLogger(ext_logger).setLevel(logging.WARNING)
+    external_loggers = ["urllib3", "pytubefix", "fsspec", "pydub", "numba"]
+    for ext_logger in external_loggers:
+        logging.getLogger(ext_logger).setLevel(logging.WARNING)
 
     # Test logs to confirm configuration
     logger.info(f"Handlers configured: {[type(h).__name__ for h in logger.handlers]}")

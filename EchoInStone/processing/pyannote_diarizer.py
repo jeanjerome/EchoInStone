@@ -2,54 +2,90 @@ from pyannote.audio import Pipeline
 from pyannote.audio.pipelines.utils.hook import ProgressHook
 import torch
 import logging
-from .diarizer_interface import DiarizerInterface
+import os
+from EchoInStone.processing.diarizer_interface import DiarizerInterface
+from EchoInStone.utils import timer
 
 # Import HF Token 
 try:
-    from ..config import HUGGING_FACE_TOKEN
+    from EchoInStone.config_private import HUGGING_FACE_TOKEN
 except ImportError:
-    from ..config_private import HUGGING_FACE_TOKEN
+    from EchoInStone.config import HUGGING_FACE_TOKEN
 
 logger = logging.getLogger(__name__)
 
 class PyannoteDiarizer(DiarizerInterface):
-    def __init__(self):
+    def __init__(self, model_name="pyannote/speaker-diarization-3.1", cache_dir=None):
         """Initialize the PyannoteDiarizer with the pretrained model.
 
-        Loads the speaker diarization model and sets up the device for computation.
+        Args:
+            model_name (str): Name of the diarization model to use
+            cache_dir (str, optional): Directory to cache the model
         """
+        self.model_name = model_name
+        self.cache_dir = cache_dir or os.path.expanduser("~/.cache/pyannote")
+        self.pipeline = None
+        self._initialize_pipeline()
+    
+    def _initialize_pipeline(self):
+        """Initialize the diarization pipeline with proper error handling."""
         try:
+            # Create cache directory if it doesn't exist
+            os.makedirs(self.cache_dir, exist_ok=True)
+            
+            # Load the pipeline
             self.pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
-                use_auth_token=HUGGING_FACE_TOKEN
+                self.model_name,
+                use_auth_token=HUGGING_FACE_TOKEN,
+                cache_dir=self.cache_dir
             )
-            # Move the pipeline to GPU (if available)
-            device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
+            
+            # Determine best device
+            if torch.backends.mps.is_available():
+                device = torch.device("mps")
+            elif torch.cuda.is_available():
+                device = torch.device("cuda")
+            else:
+                device = torch.device("cpu")
+                
+            # Move pipeline to device
             self.pipeline.to(device)
             logger.info(f"Diarization pipeline loaded and set to use {device}.")
         except Exception as e:
             logger.error(f"Error loading the diarization model: {e}")
             self.pipeline = None
-
+            raise
+    
+    @timer
     def diarize(self, audio_path: str):
-        """Perform speaker diarization on the given audio file.
-
+        """Perform speaker diarization.
+        
         Args:
-            audio_path (str): Path to the audio file to diarize.
-
+            audio_path (str): Path to the audio file to diarize
+            
         Returns:
-            Diarization result or None if diarization fails.
+            object: Diarization annotation object compatible with SpeakerAligner
         """
         if self.pipeline is None:
-            logger.warning("Diarization model is not available.")
-            return None
-
+            logger.warning("Diarization model not available, attempting to initialize.")
+            self._initialize_pipeline()
+            if self.pipeline is None:
+                return None
+        
         try:
             # Perform diarization with progress tracking
             with ProgressHook() as hook:
                 diarization = self.pipeline(audio_path, hook=hook)
-                logger.info(f"Diarization successful for file: {audio_path}")
-                return diarization
+                
+            # Log speaker statistics
+            speakers = set()
+            for _, _, speaker in diarization.itertracks(yield_label=True):
+                speakers.add(speaker)
+                
+            logger.info(f"Diarization successful for {audio_path}")
+            logger.info(f"{len(speakers)} speakers detected")
+            return diarization
+            
         except Exception as e:
             logger.error(f"Error during diarization: {e}")
             return None

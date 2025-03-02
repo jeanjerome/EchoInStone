@@ -1,10 +1,9 @@
-from ..capture import DownloaderInterface
-from .audio_transcriber_interface import AudioTranscriberInterface
-from .diarizer_interface import DiarizerInterface
-from ..utils import DataSaver
-from .aligner_interface import AlignerInterface
-
 import logging
+from EchoInStone.capture import DownloaderInterface
+from EchoInStone.processing.audio_transcriber_interface import AudioTranscriberInterface
+from EchoInStone.processing.diarizer_interface import DiarizerInterface
+from EchoInStone.processing.aligner_interface import AlignerInterface
+from EchoInStone.utils import DataSaver
 
 logger = logging.getLogger(__name__)
 
@@ -13,27 +12,40 @@ class AudioProcessingOrchestrator:
                        transcriber: AudioTranscriberInterface,
                        diarizer: DiarizerInterface,
                        aligner: AlignerInterface,
-                       saver: DataSaver,):
+                       data_saver: DataSaver):
+        """
+        Initialize the audio processing orchestrator.
+
+        Args:
+            downloader (DownloaderInterface): Handles downloading the audio.
+            transcriber (AudioTranscriberInterface): Handles audio transcription.
+            diarizer (DiarizerInterface): Handles speaker diarization.
+            aligner (AlignerInterface): Aligns transcriptions with speaker timestamps.
+            data_saver (DataSaver): Saves intermediate results when in DEBUG mode.
+        """
         self.downloader = downloader
         self.transcriber = transcriber
         self.diarizer = diarizer
         self.aligner = aligner
-        self.saver = saver
+        self.data_saver = data_saver
 
-    def extract_and_transcribe(self, echo_input: str):
+    def process(self, echo_input: str):
         logger.debug("Downloading audio...")
         audio_path = self.downloader.download(echo_input)
-        if audio_path:
-            logger.debug("Transcribing downloaded audio...")
-            transcription, timestamps = self.transcriber.transcribe(audio_path)
-            logger.debug("Diarizing downloaded audio...")
-            diarization = self.diarizer.diarize(audio_path)
+        if not audio_path:
+            return None
+        
+        logger.debug("Transcribing downloaded audio...")
+        transcription, timestamps = self.transcriber.transcribe(audio_path)
 
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Writing debug files.")
-                self.saver.save_data("audio_transcription.txt", transcription)
-                self.saver.save_data("audio_timestamps.json", timestamps)
-                self.saver.save_data("audio_diarization.txt", str(diarization))
+        logger.debug("Diarizing downloaded audio...")
+        diarization = self.diarizer.diarize(audio_path)
 
-            return self.aligner.align(transcription, timestamps, diarization)
-        return None
+        # ✅ Enregistrer les étapes intermédiaires en mode DEBUG
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Saving intermediate debug files...")
+            self.data_saver.save_data("debug_transcription.txt", transcription)
+            self.data_saver.save_data("debug_timestamps.json", timestamps)
+            self.data_saver.save_data("debug_diarization.txt", str(diarization))
+
+        return self.aligner.align(transcription, timestamps, diarization)

@@ -1,8 +1,8 @@
 import torch
 import logging
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-from .audio_transcriber_interface import AudioTranscriberInterface
-from EchoInStone.utils import timer, log_time
+from EchoInStone.processing.audio_transcriber_interface import AudioTranscriberInterface
+from EchoInStone.utils import timer
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +46,13 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
                 feature_extractor=self.processor.feature_extractor,
                 torch_dtype=self.torch_dtype,
                 device=self.device,
-                #model_kwargs={"attn_implementation": "sdpa"},
+                model_kwargs={"attn_implementation": "sdpa"},
                 return_timestamps=True,  # or "word"
                 #batch_size=24,
-                generate_kwargs={"max_new_tokens": 400},
+                generate_kwargs={
+                    "max_new_tokens": 400,
+                    "num_beams": 5
+                },
                 chunk_length_s=5,
                 stride_length_s=(1, 1),
             )

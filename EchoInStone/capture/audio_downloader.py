@@ -1,7 +1,7 @@
 import os
 import shutil
 import logging
-from . import DownloaderInterface
+from EchoInStone.capture import DownloaderInterface
 
 logger = logging.getLogger(__name__)
 

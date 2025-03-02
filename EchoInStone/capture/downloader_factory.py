@@ -1,7 +1,7 @@
-from .podcast_downloader import PodcastDownloader
-from .youtube_downloader import YouTubeDownloader
-from .audio_downloader import AudioDownloader
-from .downloader_interface import DownloaderInterface
+from EchoInStone.capture.podcast_downloader import PodcastDownloader
+from EchoInStone.capture.youtube_downloader import YouTubeDownloader
+from EchoInStone.capture.audio_downloader import AudioDownloader
+from EchoInStone.capture.downloader_interface import DownloaderInterface
 
 def get_downloader(url: str, output_dir: str) -> DownloaderInterface:
     """

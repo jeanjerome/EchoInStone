@@ -1,9 +1,7 @@
 from pytubefix import YouTube
-import os
-import re
 import logging
-from pydub import AudioSegment
-from ..capture import DownloaderInterface
+from EchoInStone.capture import DownloaderInterface
+from EchoInStone.utils.audio_utils import AudioUtils
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +27,19 @@ class YouTubeDownloader(DownloaderInterface):
         """
         try:
             yt = YouTube(url)
-            video_stream = yt.streams.filter(only_audio=True).first()
+            # Select the audio stream with the highest bitrate
+            video_stream = yt.streams.filter(only_audio=True).order_by("abr").desc().first()
 
             # Download the audio file
             audio_file = video_stream.download(output_path=self.output_dir)
 
-            # Clean up the file name
-            dir_path, base_name = os.path.split(audio_file)
-            base, ext = os.path.splitext(base_name)
-            safe_base = re.sub(r'[^\w\s-]', '', base).replace(' ', '_')
-            new_file = os.path.join(dir_path, safe_base + '.mp3')
-            os.rename(audio_file, new_file)
+            # Clean up the file name using AudioUtils
+            cleaned_file = AudioUtils.clean_filename(audio_file, "mp3")
 
-            # Convert the file to WAV
-            audio = AudioSegment.from_file(new_file)
-            wav_file = os.path.join(dir_path, safe_base + '.wav')
-            audio.export(wav_file, format="wav")
+            # Convert to WAV using AudioUtils
+            #wav_file = AudioUtils.convert_to_wav(cleaned_file)
+            wav_file = AudioUtils.convert_to_wav_filtered(cleaned_file)
+            
 
             logger.info(f"Audio downloaded and converted to {wav_file}")
             return wav_file
