@@ -12,13 +12,12 @@ python = ">=3.11,<3.13"
 pytubefix = "^8.12.1"
 feedparser = "^6.0.11"
 requests = "^2.32.3"
-transformers = "^4.48.3"
+transformers = "^4.51.1"
 torch = "^2.6.0"
 pyannote-audio = "^3.3.2"
 pydub = "^0.25.1"
 accelerate = "^1.3.0"
-
-[tool.poetry.dev-dependencies]
+jinja2 = "^3.1.6"
 
 [tool.poetry.group.dev.dependencies]
 pytest-bdd = "^8.1.0"
