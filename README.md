@@ -17,6 +17,13 @@
 
 - Python 3.11 or higher
 - Poetry (dependency management tool)
+- ffmpeg (required for audio processing)
+
+> Note: `ffmpeg` must be installed and available in your system's PATH.  
+> You can install it via your package manager:
+> - On macOS: `brew install ffmpeg`
+> - On Ubuntu/Debian: `sudo apt install ffmpeg`
+> - On Windows: Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
 
 ### Steps
 
