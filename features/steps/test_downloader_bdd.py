@@ -31,6 +31,30 @@ def mp3_url():
     # Set the URL to a direct MP3 file URL for testing purposes.
     url = 'https://media.radiofrance-podcast.net/podcast09/25425-13.02.2025-ITEMA_24028677-2025C53905E0006-NET_MFC_D378B90D-D570-44E9-AB5A-F0CC63B05A14-21.mp3'
 
+@given('the URL is an RFI MP3 URL')
+def rfi_mp3_url():
+    global url
+    # Set the URL to the specific RFI MP3 URL that was causing issues.
+    url = 'https://aod-rfi.akamaized.net/rfi/francais/audio/modules/actu/202505/RADIO_FOOT_30-05-25_-_PSG_Reims.mp3'
+
+@given('the URL is a generic audio URL')
+def generic_audio_url():
+    global url
+    # Set the URL to a generic audio URL without specific file extension.
+    url = 'https://example.com/audio-stream'
+
+@given('the URL is a local audio file path')
+def local_audio_file_path():
+    global url
+    # Set the URL to a local file path for testing purposes.
+    import tempfile
+    import os
+    temp_dir = tempfile.mkdtemp()
+    url = os.path.join(temp_dir, 'test_audio.mp3')
+    # Create the file so it exists for validation
+    with open(url, 'w') as f:
+        f.write('test')
+
 @when('the downloader is selected')
 def select_downloader():
     global downloader

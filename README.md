@@ -98,12 +98,61 @@ poetry run python main.py <audio_input_url>
 
 ## Testing
 
-To run the tests, use the following command:
+EchoInStone includes comprehensive test coverage with both unit tests and BDD (Behavior-Driven Development) tests to ensure reliability and prevent regressions.
+
+### Run All Tests
+
+To run all tests (unit tests and BDD tests):
 ```bash
-poetry run pytest
+poetry run pytest tests/ features/ -v
 ```
 
-This command will execute all the tests, including BDD tests, to ensure the functionality of the application.
+### Run Tests by Type
+
+**Unit Tests Only** (technical implementation tests):
+```bash
+poetry run pytest tests/ -v
+```
+
+**BDD Tests Only** (behavioral scenarios):
+```bash
+poetry run pytest features/ -v
+```
+
+### Test Coverage
+
+To generate a coverage report:
+```bash
+poetry run pytest tests/ features/ --cov=EchoInStone --cov-report html
+```
+
+The coverage report will be generated in the `htmlcov/` directory.
+
+### Test Structure
+
+- **`tests/`**: Unit tests that verify individual components and functions
+  - `test_audio_downloader.py`: Tests for URL/file downloading functionality
+  - `test_downloader_factory.py`: Tests for downloader selection logic
+  - `test_integration.py`: Integration tests for complete workflows
+
+- **`features/`**: BDD tests that describe user-facing behavior
+  - `downloader.feature`: Downloader selection scenarios
+  - `audio_download.feature`: Audio download functionality scenarios
+  - `successful_download.feature`: Download success scenarios
+  - `invalid_url.feature`: Error handling scenarios
+  - `transcription_output.feature`: Transcription output validation
+
+### Test Examples
+
+The test suite covers various scenarios including:
+- YouTube video downloads
+- Podcast RSS feed processing
+- Direct MP3/audio file URLs (including RFI radio content)
+- Local file processing
+- Network error handling
+- Header authentication for restricted URLs
+
+All tests are designed to prevent regressions and ensure that the audio download functionality works correctly across different input types.
 
 ## Configuration
 
