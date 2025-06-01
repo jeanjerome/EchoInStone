@@ -1,0 +1,9 @@
+# Serverless-specific dependencies
+flask>=2.0.0
+gunicorn>=20.0.0
+
+# Optional: AWS Lambda runtime
+# aws-lambda-powertools
+
+# Optional: Kubernetes client
+# kubernetes>=18.0.0
