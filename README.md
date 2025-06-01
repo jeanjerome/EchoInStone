@@ -12,12 +12,14 @@
 
 ## Deployment Options
 
-EchoInStone supports multiple deployment scenarios:
+EchoInStone currently supports CLI mode for production use, with additional deployment patterns provided as reference implementations:
 
-- **CLI Mode**: Traditional command-line interface for local processing
-- **Serverless Mode**: AWS Lambda functions for scalable cloud processing
-- **Container Mode**: Kubernetes pods for microservice architectures
-- **HTTP API Mode**: RESTful web service for integration with other applications
+- **CLI Mode** ✅ **Production Ready**: Traditional command-line interface for local processing
+- **Serverless Mode** 🚧 **Example Implementation**: AWS Lambda functions for scalable cloud processing
+- **Container Mode** 🚧 **Example Implementation**: Kubernetes pods for microservice architectures  
+- **HTTP API Mode** 🚧 **Example Implementation**: RESTful web service for integration with other applications
+
+> **Note**: Only CLI mode is fully supported and tested for production use. Other deployment modes are provided as architectural examples and proof-of-concept implementations that may require additional configuration and testing for production environments.
 
 > Note: The current version of EchoInStone is a preliminary release. Future updates will include more flexible configuration options and enhanced functionality.
 
@@ -106,7 +108,9 @@ poetry run python main.py <audio_input_url>
   poetry run python main.py "https://media.radiofrance-podcast.net/podcast09/25425-13.02.2025-ITEMA_24028677-2025C53905E0006-NET_MFC_D378B90D-D570-44E9-AB5A-F0CC63B05A14-21.mp3"
   ```
 
-### Serverless Mode
+### Serverless Mode (Example Implementation)
+
+> ⚠️ **Development Status**: These are reference implementations for demonstration purposes. Additional testing and configuration may be required for production use.
 
 #### AWS Lambda
 
@@ -234,7 +238,9 @@ The test suite covers various scenarios including:
 
 All tests are designed to prevent regressions and ensure that the audio download functionality works correctly across different input types.
 
-## Deployment
+## Deployment (Example Configurations)
+
+> ⚠️ **Important**: The following deployment configurations are provided as examples and starting points. They may require additional customization, security hardening, and testing for production environments.
 
 ### Docker
 
@@ -370,10 +376,16 @@ Logging is configured to output messages to both the console and a file (`app.lo
 
 ### Performance Tuning
 
-For serverless deployments:
+For CLI deployments:
+- Ensure sufficient RAM (2-4 GB recommended) for audio processing
+- Use SSD storage for faster temporary file operations
+- Consider using GPU acceleration for Whisper if available
+
+For experimental serverless deployments:
 - **Memory**: Recommend 2-4 GB for optimal performance
-- **Timeout**: Set to 15 minutes for longer audio files
+- **Timeout**: Set to 15 minutes or more for longer audio files
 - **CPU**: Multi-core instances recommended for faster processing
+- **Note**: Resource requirements may vary significantly based on audio length and quality
 
 ## Contributing
 
