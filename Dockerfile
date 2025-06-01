@@ -1,26 +1,25 @@
-FROM runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04
+FROM python:3.11-slim
 
-# Éviter les invites interactives
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Installer les dépendances système
+# Installer les dépendances système nécessaires
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-dev python3-distutils python3-pip \
-    git ffmpeg wget curl build-essential cmake \
+    ffmpeg git curl build-essential cmake \
     libopenblas-dev libomp-dev ca-certificates \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Ajouter un alias python3.10 -> python
-RUN ln -sf /usr/bin/python3 /usr/bin/python
+# Installer Poetry
+RUN pip install --no-cache-dir poetry
 
-# Installer pip si besoin
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3
-
-# Copier les fichiers du projet (adapte si besoin)
-COPY . /app
+# Définir le répertoire de travail
 WORKDIR /app
 
-# Installer les dépendances Python (si tu as requirements.txt)
-RUN pip install --no-cache-dir -r requirements.txt
+# Copier les fichiers du projet
+COPY . /app
 
-CMD ["python3", "main.py"]
+# Installer les dépendances du projet
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi
+
+# Définir la commande de démarrage
+CMD ["python3", "serverless_main.py"]
