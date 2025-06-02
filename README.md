@@ -8,6 +8,18 @@
 - **Diarization**: Identify and separate different speakers in an audio file with the cutting-edge model, `Pyannote Speaker Diarization 3.1`.
 - **Alignment**: Align transcribed text with the corresponding audio segments using a customized algorithm tailored to be highly efficient and faithful to the outputs of Whisper and Pyannote, `SpeakerAlignement`.
 - **Flexible and Extensible Pipeline**: Easily integrate new models or processing steps into an orchestrated pipeline, `AudioProcessingOrchestrator`.
+- **Multiple Deployment Options**: Deploy as CLI tool, serverless function (AWS Lambda), containerized service (Kubernetes), or HTTP API.
+
+## Deployment Options
+
+EchoInStone currently supports CLI mode for production use, with additional deployment patterns provided as reference implementations:
+
+- **CLI Mode** ✅ **Production Ready**: Traditional command-line interface for local processing
+- **Serverless Mode** 🚧 **Example Implementation**: AWS Lambda functions for scalable cloud processing
+- **Container Mode** 🚧 **Example Implementation**: Kubernetes pods for microservice architectures  
+- **HTTP API Mode** 🚧 **Example Implementation**: RESTful web service for integration with other applications
+
+> **Note**: Only CLI mode is fully supported and tested for production use. Other deployment modes are provided as architectural examples and proof-of-concept implementations that may require additional configuration and testing for production environments.
 
 > Note: The current version of EchoInStone is a preliminary release. Future updates will include more flexible configuration options and enhanced functionality.
 
@@ -57,7 +69,7 @@ HUGGING_FACE_TOKEN = "your_token_here"
 
 ## Usage
 
-### Basic Example
+### CLI Mode (Command Line Interface)
 
 To transcribe and diarize a YouTube video, you can run the following command:
 
@@ -67,7 +79,7 @@ poetry run python main.py <audio_input_url>
 
 - `<audio_input_url>`: The URL of the audio input (YouTube, podcast, or direct audio file).
 
-### Command-Line Arguments
+#### Command-Line Arguments
 
 - **`--output_dir`**: Directory to save the output files. Default is `"results"`.
   ```bash
@@ -79,7 +91,7 @@ poetry run python main.py <audio_input_url>
   poetry run python main.py <audio_input_url> --transcription_output <output_filename>
   ```
 
-### Examples
+#### CLI Examples
 
 - **Transcribe and diarize a YouTube video**:
   ```bash
@@ -95,6 +107,78 @@ poetry run python main.py <audio_input_url>
   ```bash
   poetry run python main.py "https://media.radiofrance-podcast.net/podcast09/25425-13.02.2025-ITEMA_24028677-2025C53905E0006-NET_MFC_D378B90D-D570-44E9-AB5A-F0CC63B05A14-21.mp3"
   ```
+
+### Serverless Mode (Example Implementation)
+
+> ⚠️ **Development Status**: These are reference implementations for demonstration purposes. Additional testing and configuration may be required for production use.
+
+#### AWS Lambda
+
+```python
+from serverless.handler import lambda_handler
+
+event = {
+    "echo_input": "https://www.youtube.com/watch?v=plZRCMx_Jd8",
+    "output_dir": "/tmp/results"  # optional
+}
+
+result = lambda_handler(event, context)
+```
+
+#### Kubernetes Pod
+
+```python
+from serverless.handler import kubernetes_handler
+
+request_data = {
+    "echo_input": "https://www.youtube.com/watch?v=plZRCMx_Jd8",
+    "output_dir": "/app/results"  # optional
+}
+
+result = kubernetes_handler(request_data)
+```
+
+#### HTTP API
+
+Start the HTTP server:
+```bash
+python serverless/handler.py
+```
+
+Send a POST request:
+```bash
+curl -X POST http://localhost:5000/process \
+  -H "Content-Type: application/json" \
+  -d '{
+    "echo_input": "https://www.youtube.com/watch?v=plZRCMx_Jd8",
+    "output_dir": "results"
+  }'
+```
+
+Health check:
+```bash
+curl http://localhost:5000/health
+```
+
+### Programmatic Usage
+
+```python
+from EchoInStone.app import EchoInStoneApp
+
+# Initialize the application
+app = EchoInStoneApp(output_dir="results")
+
+# Process audio (asynchronous)
+transcriptions = app.process_audio(
+    echo_input="https://www.youtube.com/watch?v=plZRCMx_Jd8",
+    transcription_output="output.json"
+)
+
+# Process audio (synchronous, returns dict)
+result = app.process_audio_sync(
+    echo_input="https://www.youtube.com/watch?v=plZRCMx_Jd8"
+)
+```
 
 ## Testing
 
@@ -154,16 +238,154 @@ The test suite covers various scenarios including:
 
 All tests are designed to prevent regressions and ensure that the audio download functionality works correctly across different input types.
 
+## Deployment (Example Configurations)
+
+> ⚠️ **Important**: The following deployment configurations are provided as examples and starting points. They may require additional customization, security hardening, and testing for production environments.
+
+### Docker
+
+Create a `Dockerfile`:
+
+```dockerfile
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY pyproject.toml poetry.lock ./
+COPY serverless/requirements.txt ./serverless/
+RUN pip install poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev && \
+    pip install -r serverless/requirements.txt
+
+# Copy application code
+COPY . .
+
+# Expose port for HTTP API
+EXPOSE 5000
+
+# Default command (can be overridden)
+CMD ["python", "serverless/handler.py"]
+```
+
+Build and run:
+```bash
+docker build -t echoinstone .
+docker run -p 5000:5000 echoinstone
+```
+
+### Kubernetes
+
+Create a deployment manifest:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echoinstone
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: echoinstone
+  template:
+    metadata:
+      labels:
+        app: echoinstone
+    spec:
+      containers:
+      - name: echoinstone
+        image: echoinstone:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echoinstone-service
+spec:
+  selector:
+    app: echoinstone
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
+  type: LoadBalancer
+```
+
+Deploy:
+```bash
+kubectl apply -f echoinstone-deployment.yaml
+```
+
+### AWS Lambda
+
+Package and deploy using AWS SAM or Serverless Framework:
+
+```yaml
+# serverless.yml
+service: echoinstone
+
+provider:
+  name: aws
+  runtime: python3.11
+  timeout: 900  # 15 minutes
+  memorySize: 3008
+
+functions:
+  process:
+    handler: serverless.handler.lambda_handler
+    events:
+      - http:
+          path: process
+          method: post
+```
+
 ## Configuration
+
+### Environment Variables
+
+- **`LOG_LEVEL`**: Set logging level (DEBUG, INFO, WARNING, ERROR). Default: INFO
+- **`HUGGING_FACE_TOKEN`**: Your Hugging Face authentication token (required)
+- **`OUTPUT_DIR`**: Default output directory for processed files
 
 ### Logging
 
-Logging is configured to output messages to both the console and a file (`app.log`). You can adjust the logging level and format in the `logging_config.py` file.
+Logging is configured to output messages to both the console and a file (`app.log`). You can adjust the logging level using the `LOG_LEVEL` environment variable or by modifying the `logging_config.py` file.
 
 ### Models
 
 - **Transcription Model**: The default transcription model is `openai/whisper-large-v3-turbo`. You can change this by modifying the `model_name` parameter in the `WhisperAudioTranscriber` initialization.
 - **Diarization Model**: The default diarization model is `pyannote/speaker-diarization-3.1`. You can change this by modifying the model loading code in the `PyannoteDiarizer` class.
+
+### Performance Tuning
+
+For CLI deployments:
+- Ensure sufficient RAM (2-4 GB recommended) for audio processing
+- Use SSD storage for faster temporary file operations
+- Consider using GPU acceleration for Whisper if available
+
+For experimental serverless deployments:
+- **Memory**: Recommend 2-4 GB for optimal performance
+- **Timeout**: Set to 15 minutes or more for longer audio files
+- **CPU**: Multi-core instances recommended for faster processing
+- **Note**: Resource requirements may vary significantly based on audio length and quality
 
 ## Contributing
 
