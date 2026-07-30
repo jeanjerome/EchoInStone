@@ -47,9 +47,15 @@ class PyannoteDiarizer(DiarizerInterface):
         try:
             # Perform diarization with progress tracking
             with ProgressHook() as hook:
-                diarization = self.pipeline(audio_path, hook=hook)
+                output = self.pipeline(audio_path, hook=hook)
                 logger.info(f"Diarization successful for file: {audio_path}")
-                return diarization
+                # The pipeline returns a container holding two annotations. The
+                # exclusive one has overlapping speech turns removed, so exactly
+                # one speaker is active at any instant. Alignment attributes a
+                # single speaker to each transcript segment, so overlap-free
+                # turns are what it needs; the caller receives the Annotation
+                # itself rather than the container.
+                return output.exclusive_speaker_diarization
         except Exception as e:
             logger.error(f"Error during diarization: {e}")
             return None
