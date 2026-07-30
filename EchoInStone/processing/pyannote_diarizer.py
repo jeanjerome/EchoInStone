@@ -21,7 +21,7 @@ class PyannoteDiarizer(DiarizerInterface):
         try:
             self.pipeline = Pipeline.from_pretrained(
                 "pyannote/speaker-diarization-3.1",
-                use_auth_token=HUGGING_FACE_TOKEN
+                token=HUGGING_FACE_TOKEN
             )
             # Move the pipeline to GPU (if available)
             device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
