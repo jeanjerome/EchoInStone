@@ -37,7 +37,15 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
 
             self.processor = AutoProcessor.from_pretrained(model_name)
 
-            # Configure the pipeline for automatic speech recognition
+            # Configure the pipeline for automatic speech recognition.
+            #
+            # No chunking is configured on purpose. Whisper is trained on 30
+            # second windows and carries its own long-form algorithm, which
+            # keeps the decoding context across window boundaries. Slicing the
+            # audio ahead of it into shorter windows cuts through that context:
+            # it duplicates speech across overlapping windows and re-runs
+            # language detection on every window, so a long recording can drift
+            # into another language partway through.
             self.pipe = pipeline(
                 "automatic-speech-recognition",
                 model=self.model,
@@ -45,12 +53,8 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
                 feature_extractor=self.processor.feature_extractor,
                 dtype=self.dtype,
                 device=self.device,
-                #model_kwargs={"attn_implementation": "sdpa"},
-                return_timestamps=True,  # or "word"
-                #batch_size=24,
-                generate_kwargs={"max_new_tokens": 400},
-                chunk_length_s=5,
-                stride_length_s=(1, 1),
+                # Segment timestamps drive speaker alignment downstream.
+                return_timestamps=True,
             )
             logger.info("Transcription model and pipeline loaded successfully.")
         except Exception as e:
