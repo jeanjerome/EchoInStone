@@ -4,12 +4,6 @@ import torch
 import logging
 from .diarizer_interface import DiarizerInterface
 
-# Import HF Token 
-try:
-    from ..config import HUGGING_FACE_TOKEN
-except ImportError:
-    from ..config_private import HUGGING_FACE_TOKEN
-
 logger = logging.getLogger(__name__)
 
 class PyannoteDiarizer(DiarizerInterface):
@@ -19,16 +13,23 @@ class PyannoteDiarizer(DiarizerInterface):
         Loads the speaker diarization model and sets up the device for computation.
         """
         try:
-            self.pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
-                token=HUGGING_FACE_TOKEN
-            )
+            # No credential is passed: huggingface_hub resolves one itself, from
+            # the HF_TOKEN environment variable or the login stored by
+            # `huggingface-cli login`. Carrying a token in the source tree would
+            # leave a secret one commit away from being published.
+            self.pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
             # Move the pipeline to GPU (if available)
             device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
             self.pipeline.to(device)
             logger.info(f"Diarization pipeline loaded and set to use {device}.")
         except Exception as e:
-            logger.error(f"Error loading the diarization model: {e}")
+            # The model is gated, so a missing or unaccepted credential is the
+            # likeliest cause. The underlying error names neither remedy.
+            logger.error(
+                f"Error loading the diarization model: {e}. "
+                "Authenticate with `huggingface-cli login` or set HF_TOKEN in the "
+                "environment, and accept the model conditions on its Hugging Face page."
+            )
             self.pipeline = None
 
     def diarize(self, audio_path: str):

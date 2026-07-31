@@ -5,6 +5,7 @@ pyannote Annotation. These tests pin that unwrapping down, because a mismatch
 here surfaces only when a real audio file runs all the way through.
 """
 
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -51,6 +52,36 @@ def diarizer(diarize_output):
         instance = PyannoteDiarizer()
     instance.pipeline = MagicMock(return_value=diarize_output)
     return instance
+
+
+class TestPipelineLoading:
+    """How the pipeline is loaded, and what a failure tells the operator."""
+
+    def test_carries_no_credential_of_its_own(self):
+        """A token held in the source tree is a secret one commit from publication.
+
+        huggingface_hub resolves one from the environment or the stored login,
+        so the call passes none.
+        """
+        with patch("EchoInStone.processing.pyannote_diarizer.Pipeline") as pipeline:
+            PyannoteDiarizer()
+
+        _, kwargs = pipeline.from_pretrained.call_args
+        assert "token" not in kwargs
+
+    def test_names_both_remedies_when_loading_fails(self, caplog):
+        """The model is gated, so an absent credential is the likeliest cause.
+
+        The error raised underneath names neither way to supply one.
+        """
+        with patch("EchoInStone.processing.pyannote_diarizer.Pipeline") as pipeline:
+            pipeline.from_pretrained.side_effect = RuntimeError("gated repo")
+            with caplog.at_level(logging.ERROR):
+                instance = PyannoteDiarizer()
+
+        assert instance.pipeline is None
+        assert "huggingface-cli login" in caplog.text
+        assert "HF_TOKEN" in caplog.text
 
 
 class TestPyannoteDiarizer:

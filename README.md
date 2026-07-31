@@ -41,19 +41,21 @@
 3. **Configure logging** (optional):
    - The logging configuration is set up to output logs to both the console and a file (`app.log`). You can modify the logging settings in `EchoInStone/utils/logging_config.py`.
 
-4. **Configure Hugging Face Token**:
+4. **Authenticate with Hugging Face**:
 
-  - Add your Hugging Face token to this file. You can obtain a token by following these steps:
-     1. Go to [Hugging Face Settings](https://huggingface.co/settings/tokens).
-     2. Click on "New token".
-     3. Copy the generated token and paste it into the `EchoInStone/config.py` file as shown below:
+   The diarization model is gated, so it needs a Hugging Face credential. Create a token at [Hugging Face Settings](https://huggingface.co/settings/tokens), then either log in once:
 
-```python
-# EchoInStone/config.py
+   ```bash
+   huggingface-cli login
+   ```
 
-# Hugging Face authentication token
-HUGGING_FACE_TOKEN = "your_token_here"
-```
+   or export the token in your environment:
+
+   ```bash
+   export HF_TOKEN=hf_your_token_here
+   ```
+
+   Either way the token is read by `huggingface_hub` and never stored in the repository. Visit the [model page](https://huggingface.co/pyannote/speaker-diarization-3.1) once to accept its conditions, otherwise the download is refused whatever the credential.
 
 ## Usage
 
