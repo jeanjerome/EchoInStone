@@ -17,9 +17,15 @@ class PyannoteDiarizer(DiarizerInterface):
             # the HF_TOKEN environment variable or the login stored by
             # `huggingface-cli login`. Carrying a token in the source tree would
             # leave a secret one commit away from being published.
-            self.pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-community-1"
-            )
+            # speaker-diarization-community-1 supersedes this pipeline and
+            # reports lower error across pyannote's benchmarks, but measured
+            # worse here: on a 93 minute interview it produced 11
+            # misattributions against 2 corrections, breaking one speaker's
+            # sentences wherever their delivery shifted — emphasis, repetition,
+            # a dropped voice. Constraining num_speakers, the option pyannote
+            # documents for this, changed nothing. The benchmarks hold; they
+            # just do not predict a long interview dominated by one voice.
+            self.pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
             # Move the pipeline to GPU (if available)
             device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
             self.pipeline.to(device)
