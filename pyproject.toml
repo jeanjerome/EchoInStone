@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "EchoInStone"
-version = "0.1.0"
+version = "0.9.0"
 description = "A tool to extract and transcribe audio."
 authors = ["Jean-Jerome Levy"]
 packages = [
