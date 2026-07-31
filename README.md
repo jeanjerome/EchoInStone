@@ -121,6 +121,13 @@ poetry run pytest tests/ -v
 poetry run pytest features/ -v
 ```
 
+One scenario downloads a real video and is marked `youtube`. YouTube answers datacenter addresses with a bot challenge, so it passes from a workstation but not from a hosted CI runner, where it is deselected. To run it alone, or to leave it out locally:
+
+```bash
+poetry run pytest features/ -v -m youtube        # that scenario only
+poetry run pytest features/ -v -m "not youtube"  # everything else, as CI runs it
+```
+
 ### Test Coverage
 
 To generate a coverage report:

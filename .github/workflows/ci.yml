@@ -104,8 +104,14 @@ jobs:
           poetry config virtualenvs.in-project true
           poetry install --no-interaction
 
-      - name: Run BDD suite
-        run: poetry run pytest features/ -v
+      # The YouTube download scenario is left out here rather than skipped
+      # quietly: YouTube answers datacenter addresses with a bot challenge, so
+      # it can only fail on a hosted runner. It still runs from a workstation,
+      # where the address is residential.
+      - name: Run BDD suite (YouTube download scenario deselected)
+        run: |
+          echo "Deselected: -m 'not youtube' — scenarios downloading from YouTube, which refuses datacenter addresses."
+          poetry run pytest features/ -v -m "not youtube"
 
       - name: Upload coverage report
         if: always()
