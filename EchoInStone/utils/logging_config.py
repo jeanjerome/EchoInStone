@@ -31,10 +31,16 @@ def configure_logging(log_level=logging.INFO):
         file_handler.setFormatter(logging.Formatter(log_format))
         logger.addHandler(file_handler)
 
-    # Reduce log verbosity for external libraries to avoid noise
-    # external_loggers = ["urllib3", "pytubefix", "fsspec", "pydub"]
-    # for ext_logger in external_loggers:
-    #     logging.getLogger(ext_logger).setLevel(logging.WARNING)
+    # Reduce log verbosity for external libraries to avoid noise.
+    #
+    # httpx reports every request at INFO, and resolving a model on the hub
+    # costs a few dozen of them before any audio is read, which buries the
+    # pipeline's own progress. These libraries keep their own level under
+    # DEBUG, where that traffic is what is being looked at.
+    if log_level > logging.DEBUG:
+        external_loggers = ["httpx"]
+        for ext_logger in external_loggers:
+            logging.getLogger(ext_logger).setLevel(logging.WARNING)
 
     # Test logs to confirm configuration
     logger.info(f"Handlers configured: {[type(h).__name__ for h in logger.handlers]}")
