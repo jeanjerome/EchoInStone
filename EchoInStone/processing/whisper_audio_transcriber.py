@@ -37,6 +37,13 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
 
             self.processor = AutoProcessor.from_pretrained(model_name)
 
+            # Whisper ships a tokenizer config asking for space cleanup after
+            # decoding. That step was designed for WordPiece and is destructive
+            # on a BPE vocabulary: it strips the space before punctuation, which
+            # French requires ahead of " ! ? : ; ". Opt out explicitly rather
+            # than rely on the tokenizer declining the request on our behalf.
+            self.processor.tokenizer.clean_up_tokenization_spaces = False
+
             # Configure the pipeline for automatic speech recognition.
             #
             # No chunking is configured on purpose. Whisper is trained on 30
@@ -46,6 +53,10 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
             # it duplicates speech across overlapping windows and re-runs
             # language detection on every window, so a long recording can drift
             # into another language partway through.
+            #
+            # Decoding options are passed per call rather than here: options
+            # handed to the constructor are folded into the pipeline generation
+            # config, a deprecated path scheduled for removal.
             self.pipe = pipeline(
                 "automatic-speech-recognition",
                 model=self.model,
@@ -53,8 +64,6 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
                 feature_extractor=self.processor.feature_extractor,
                 dtype=self.dtype,
                 device=self.device,
-                # Segment timestamps drive speaker alignment downstream.
-                return_timestamps=True,
             )
             logger.info("Transcription model and pipeline loaded successfully.")
         except Exception as e:
@@ -72,8 +81,15 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
             tuple: A tuple containing the transcription text and timestamps.
         """
         try:
-            # Perform transcription with timestamps
-            result = self.pipe(audio_path)
+            # Segment timestamps drive speaker alignment downstream.
+            #
+            # The task is stated explicitly even though transcription is what
+            # the checkpoint already defaults to: naming it selects the decoder
+            # prompt through the supported flag instead of the legacy
+            # forced_decoder_ids entry carried by the checkpoint config. The
+            # language is deliberately left out, so each recording is still
+            # detected rather than assumed.
+            result = self.pipe(audio_path, return_timestamps=True, task="transcribe")
             transcription = result['text']
             timestamps = result['chunks']
             logger.info(f"Successfully transcribed: {audio_path}")
