@@ -4,12 +4,6 @@ import torch
 import logging
 from .diarizer_interface import DiarizerInterface
 
-# Import HF Token 
-try:
-    from ..config import HUGGING_FACE_TOKEN
-except ImportError:
-    from ..config_private import HUGGING_FACE_TOKEN
-
 logger = logging.getLogger(__name__)
 
 class PyannoteDiarizer(DiarizerInterface):
@@ -19,16 +13,31 @@ class PyannoteDiarizer(DiarizerInterface):
         Loads the speaker diarization model and sets up the device for computation.
         """
         try:
-            self.pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
-                use_auth_token=HUGGING_FACE_TOKEN
-            )
+            # No credential is passed: huggingface_hub resolves one itself, from
+            # the HF_TOKEN environment variable or the login stored by
+            # `huggingface-cli login`. Carrying a token in the source tree would
+            # leave a secret one commit away from being published.
+            # speaker-diarization-community-1 supersedes this pipeline and
+            # reports lower error across pyannote's benchmarks, but measured
+            # worse here: on a 93 minute interview it produced 11
+            # misattributions against 2 corrections, breaking one speaker's
+            # sentences wherever their delivery shifted — emphasis, repetition,
+            # a dropped voice. Constraining num_speakers, the option pyannote
+            # documents for this, changed nothing. The benchmarks hold; they
+            # just do not predict a long interview dominated by one voice.
+            self.pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
             # Move the pipeline to GPU (if available)
             device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
             self.pipeline.to(device)
             logger.info(f"Diarization pipeline loaded and set to use {device}.")
         except Exception as e:
-            logger.error(f"Error loading the diarization model: {e}")
+            # The model is gated, so a missing or unaccepted credential is the
+            # likeliest cause. The underlying error names neither remedy.
+            logger.error(
+                f"Error loading the diarization model: {e}. "
+                "Authenticate with `huggingface-cli login` or set HF_TOKEN in the "
+                "environment, and accept the model conditions on its Hugging Face page."
+            )
             self.pipeline = None
 
     def diarize(self, audio_path: str):
@@ -47,9 +56,15 @@ class PyannoteDiarizer(DiarizerInterface):
         try:
             # Perform diarization with progress tracking
             with ProgressHook() as hook:
-                diarization = self.pipeline(audio_path, hook=hook)
+                output = self.pipeline(audio_path, hook=hook)
                 logger.info(f"Diarization successful for file: {audio_path}")
-                return diarization
+                # The pipeline returns a container holding two annotations. The
+                # exclusive one has overlapping speech turns removed, so exactly
+                # one speaker is active at any instant. Alignment attributes a
+                # single speaker to each transcript segment, so overlap-free
+                # turns are what it needs; the caller receives the Annotation
+                # itself rather than the container.
+                return output.exclusive_speaker_diarization
         except Exception as e:
             logger.error(f"Error during diarization: {e}")
             return None

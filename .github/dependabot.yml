@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  # Python dependencies resolved through Poetry (pyproject.toml + poetry.lock).
+  # Minor and patch bumps are grouped into a single PR so routine transitive
+  # updates do not open one pull request per package. Major bumps stay
+  # ungrouped: they need individual review because they can change APIs.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+      prefix-development: "build(deps-dev)"
+    groups:
+      python-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Workflow actions pinned in .github/workflows are updated together: an
+  # outdated action is a supply-chain risk as much as an outdated library.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

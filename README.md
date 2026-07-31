@@ -15,7 +15,7 @@
 
 ### Prerequisites
 
-- Python 3.11 or higher
+- Python 3.11 or 3.12
 - Poetry (dependency management tool)
 - ffmpeg (required for audio processing)
 
@@ -39,21 +39,23 @@
    ```
 
 3. **Configure logging** (optional):
-   - The logging configuration is set up to output logs to both the console and a file (`app.log`). You can modify the logging settings in `logging_config.py`.
+   - The logging configuration is set up to output logs to both the console and a file (`app.log`). You can modify the logging settings in `EchoInStone/utils/logging_config.py`.
 
-4. **Configure Hugging Face Token**:
+4. **Authenticate with Hugging Face**:
 
-  - Add your Hugging Face token to this file. You can obtain a token by following these steps:
-     1. Go to [Hugging Face Settings](https://huggingface.co/settings/tokens).
-     2. Click on "New token".
-     3. Copy the generated token and paste it into the `EchoInStone/config.py` file as shown below:
+   The diarization model is gated, so it needs a Hugging Face credential. Create a token at [Hugging Face Settings](https://huggingface.co/settings/tokens), then either log in once:
 
-```python
-# EchoInStone/config.py
+   ```bash
+   huggingface-cli login
+   ```
 
-# Hugging Face authentication token
-HUGGING_FACE_TOKEN = "your_token_here"
-```
+   or export the token in your environment:
+
+   ```bash
+   export HF_TOKEN=hf_your_token_here
+   ```
+
+   Either way the token is read by `huggingface_hub` and never stored in the repository. Visit the [model page](https://huggingface.co/pyannote/speaker-diarization-3.1) once to accept its conditions, otherwise the download is refused whatever the credential.
 
 ## Usage
 
@@ -107,6 +109,8 @@ To run all tests (unit tests and BDD tests):
 poetry run pytest tests/ features/ -v
 ```
 
+`pytest.ini` collects both directories by default, so a bare `poetry run pytest` runs the same set.
+
 ### Run Tests by Type
 
 **Unit Tests Only** (technical implementation tests):
@@ -117,6 +121,13 @@ poetry run pytest tests/ -v
 **BDD Tests Only** (behavioral scenarios):
 ```bash
 poetry run pytest features/ -v
+```
+
+One scenario downloads a real video and is marked `youtube`. YouTube answers datacenter addresses with a bot challenge, so it passes from a workstation but not from a hosted CI runner, where it is deselected. To run it alone, or to leave it out locally:
+
+```bash
+poetry run pytest features/ -v -m youtube        # that scenario only
+poetry run pytest features/ -v -m "not youtube"  # everything else, as CI runs it
 ```
 
 ### Test Coverage
@@ -132,7 +143,11 @@ The coverage report will be generated in the `htmlcov/` directory.
 
 - **`tests/`**: Unit tests that verify individual components and functions
   - `test_audio_downloader.py`: Tests for URL/file downloading functionality
+  - `test_podcast_downloader.py`: Tests for RSS feed parsing and episode selection
   - `test_downloader_factory.py`: Tests for downloader selection logic
+  - `test_whisper_audio_transcriber.py`: Tests for the decoding options passed to Whisper
+  - `test_pyannote_diarizer.py`: Tests for the diarization stage and its join to alignment
+  - `test_logging_config.py`: Tests for the log levels applied to third-party libraries
   - `test_integration.py`: Integration tests for complete workflows
 
 - **`features/`**: BDD tests that describe user-facing behavior
@@ -154,16 +169,22 @@ The test suite covers various scenarios including:
 
 All tests are designed to prevent regressions and ensure that the audio download functionality works correctly across different input types.
 
+### Continuous Integration
+
+Every pull request runs `.github/workflows/ci.yml`: lock file consistency (`poetry check --lock`), unit tests on Python 3.11 and 3.12, and the BDD suite. The BDD suite runs as its own job because it downloads the Whisper weights; both the virtualenv and the model cache are keyed so repeat runs stay cheap.
+
 ## Configuration
 
 ### Logging
 
-Logging is configured to output messages to both the console and a file (`app.log`). You can adjust the logging level and format in the `logging_config.py` file.
+Logging is configured to output messages to both the console and a file (`app.log`). You can adjust the logging level and format in the `EchoInStone/utils/logging_config.py` file.
+
+Third-party libraries are quieted above `DEBUG`: resolving a model on the Hugging Face hub emits dozens of request lines that would otherwise bury the pipeline's own progress. Running at `DEBUG` restores them.
 
 ### Models
 
 - **Transcription Model**: The default transcription model is `openai/whisper-large-v3-turbo`. You can change this by modifying the `model_name` parameter in the `WhisperAudioTranscriber` initialization.
-- **Diarization Model**: The default diarization model is `pyannote/speaker-diarization-3.1`. You can change this by modifying the model loading code in the `PyannoteDiarizer` class.
+- **Diarization Model**: The default diarization model is `pyannote/speaker-diarization-3.1`. You can change this by modifying the model loading code in the `PyannoteDiarizer` class. Its successor `speaker-diarization-community-1` was evaluated and set aside: it segments more finely, and on a long interview dominated by one voice that granularity split sentences and credited them to the wrong speaker more often than it resolved genuine interjections.
 
 ## Contributing
 

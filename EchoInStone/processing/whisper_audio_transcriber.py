@@ -16,42 +16,54 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
         # Configure the device for computation
         if torch.cuda.is_available():
             self.device = "cuda:0"
-            self.torch_dtype = torch.float16
+            self.dtype = torch.float16
         elif torch.backends.mps.is_available():
             self.device = "mps"
-            self.torch_dtype = torch.float16
+            self.dtype = torch.float16
         else:
             self.device = "cpu"
-            self.torch_dtype = torch.float32
+            self.dtype = torch.float32
 
-        logger.info(f"Using device: {self.device} with dtype: {self.torch_dtype}")
+        logger.info(f"Using device: {self.device} with dtype: {self.dtype}")
 
         # Load the model and processor
         try:
             self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
                 model_name,
-                torch_dtype=self.torch_dtype,
-                low_cpu_mem_usage=True,
+                dtype=self.dtype,
                 use_safetensors=True,
             )
             self.model.to(self.device)
 
             self.processor = AutoProcessor.from_pretrained(model_name)
 
-            # Configure the pipeline for automatic speech recognition
+            # Whisper ships a tokenizer config asking for space cleanup after
+            # decoding. That step was designed for WordPiece and is destructive
+            # on a BPE vocabulary: it strips the space before punctuation, which
+            # French requires ahead of " ! ? : ; ". Opt out explicitly rather
+            # than rely on the tokenizer declining the request on our behalf.
+            self.processor.tokenizer.clean_up_tokenization_spaces = False
+
+            # Configure the pipeline for automatic speech recognition.
+            #
+            # No chunking is configured on purpose. Whisper is trained on 30
+            # second windows and carries its own long-form algorithm, which
+            # keeps the decoding context across window boundaries. Slicing the
+            # audio ahead of it into shorter windows cuts through that context:
+            # it duplicates speech across overlapping windows and re-runs
+            # language detection on every window, so a long recording can drift
+            # into another language partway through.
+            #
+            # Decoding options are passed per call rather than here: options
+            # handed to the constructor are folded into the pipeline generation
+            # config, a deprecated path scheduled for removal.
             self.pipe = pipeline(
                 "automatic-speech-recognition",
                 model=self.model,
                 tokenizer=self.processor.tokenizer,
                 feature_extractor=self.processor.feature_extractor,
-                torch_dtype=self.torch_dtype,
+                dtype=self.dtype,
                 device=self.device,
-                #model_kwargs={"attn_implementation": "sdpa"},
-                return_timestamps=True,  # or "word"
-                #batch_size=24,
-                generate_kwargs={"max_new_tokens": 400},
-                chunk_length_s=5,
-                stride_length_s=(1, 1),
             )
             logger.info("Transcription model and pipeline loaded successfully.")
         except Exception as e:
@@ -69,8 +81,15 @@ class WhisperAudioTranscriber(AudioTranscriberInterface):
             tuple: A tuple containing the transcription text and timestamps.
         """
         try:
-            # Perform transcription with timestamps
-            result = self.pipe(audio_path)
+            # Segment timestamps drive speaker alignment downstream.
+            #
+            # The task is stated explicitly even though transcription is what
+            # the checkpoint already defaults to: naming it selects the decoder
+            # prompt through the supported flag instead of the legacy
+            # forced_decoder_ids entry carried by the checkpoint config. The
+            # language is deliberately left out, so each recording is still
+            # detected rather than assumed.
+            result = self.pipe(audio_path, return_timestamps=True, task="transcribe")
             transcription = result['text']
             timestamps = result['chunks']
             logger.info(f"Successfully transcribed: {audio_path}")
