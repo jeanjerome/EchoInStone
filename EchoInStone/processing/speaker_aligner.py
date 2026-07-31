@@ -31,18 +31,25 @@ class SpeakerAligner(AlignerInterface):
                 # Use the end of the last diarization segment as the default end time
                 chunk_end = last_diarization_end if last_diarization_end is not None else chunk_start
 
-            # Find the best matching speaker segment
-            best_match = self.find_best_match(diarization, chunk_start, chunk_end)
-            if best_match:
-                speaker = best_match[2]  # Extract the speaker label
+            # Attribute the segment to whoever holds the floor across it
+            speaker = self.find_dominant_speaker(diarization, chunk_start, chunk_end)
+            if speaker is not None:
                 speaker_transcriptions.append((speaker, chunk_start, chunk_end, segment_text))
 
         # Merge consecutive segments of the same speaker
         speaker_transcriptions = self.merge_consecutive_segments(speaker_transcriptions)
         return speaker_transcriptions
 
-    def find_best_match(self, diarization, start_time, end_time):
-        """Finds the best matching speaker segment for a given time range.
+    def find_dominant_speaker(self, diarization, start_time, end_time):
+        """Finds the speaker holding the floor across a given time range.
+
+        Speech is summed per speaker rather than compared turn by turn. A
+        finely segmented diarization splits one speaker's answer into many
+        turns and threads brief interjections from the other through it;
+        comparing single turns then lets a fraction of a second carry off a
+        whole transcript segment, cutting a sentence in half and crediting it
+        to the wrong person. Summing keeps the segment with whoever actually
+        speaks across it.
 
         Args:
             diarization (object): Diarization object containing speaker segments.
@@ -50,26 +57,23 @@ class SpeakerAligner(AlignerInterface):
             end_time (float): End time of the segment.
 
         Returns:
-            tuple: The best matching speaker segment (start, end, speaker).
+            str: Label of the dominant speaker, or None when no turn overlaps.
         """
-        best_match = None
-        max_intersection = 0
+        speech_time = {}
 
         for turn, _, speaker in diarization.itertracks(yield_label=True):
-            turn_start = turn.start
-            turn_end = turn.end
+            overlap_start = max(start_time, turn.start)
+            overlap_end = min(end_time, turn.end)
 
-            # Calculate intersection manually
-            intersection_start = max(start_time, turn_start)
-            intersection_end = min(end_time, turn_end)
+            if overlap_start < overlap_end:
+                speech_time[speaker] = (
+                    speech_time.get(speaker, 0.0) + overlap_end - overlap_start
+                )
 
-            if intersection_start < intersection_end:
-                intersection_length = intersection_end - intersection_start
-                if intersection_length > max_intersection:
-                    max_intersection = intersection_length
-                    best_match = (turn_start, turn_end, speaker)
+        if not speech_time:
+            return None
 
-        return best_match
+        return max(speech_time, key=speech_time.get)
 
     def merge_consecutive_segments(self, segments):
         """Merges consecutive segments of the same speaker.

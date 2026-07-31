@@ -17,7 +17,9 @@ class PyannoteDiarizer(DiarizerInterface):
             # the HF_TOKEN environment variable or the login stored by
             # `huggingface-cli login`. Carrying a token in the source tree would
             # leave a secret one commit away from being published.
-            self.pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
+            self.pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-community-1"
+            )
             # Move the pipeline to GPU (if available)
             device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
             self.pipeline.to(device)

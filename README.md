@@ -5,7 +5,7 @@
 ## Features
 
 - **Transcription**: Convert audio files into text using state-of-the-art automatic speech recognition (ASR) model, `Whisper Large v3 Turbo`.
-- **Diarization**: Identify and separate different speakers in an audio file with the cutting-edge model, `Pyannote Speaker Diarization 3.1`.
+- **Diarization**: Identify and separate different speakers in an audio file with the cutting-edge model, `Pyannote Speaker Diarization Community-1`.
 - **Alignment**: Align transcribed text with the corresponding audio segments using a customized algorithm tailored to be highly efficient and faithful to the outputs of Whisper and Pyannote, `SpeakerAlignement`.
 - **Flexible and Extensible Pipeline**: Easily integrate new models or processing steps into an orchestrated pipeline, `AudioProcessingOrchestrator`.
 
@@ -55,7 +55,7 @@
    export HF_TOKEN=hf_your_token_here
    ```
 
-   Either way the token is read by `huggingface_hub` and never stored in the repository. Visit the [model page](https://huggingface.co/pyannote/speaker-diarization-3.1) once to accept its conditions, otherwise the download is refused whatever the credential.
+   Either way the token is read by `huggingface_hub` and never stored in the repository. Visit the [model page](https://huggingface.co/pyannote/speaker-diarization-community-1) once to accept its conditions, otherwise the download is refused whatever the credential.
 
 ## Usage
 
@@ -184,7 +184,7 @@ Third-party libraries are quieted above `DEBUG`: resolving a model on the Huggin
 ### Models
 
 - **Transcription Model**: The default transcription model is `openai/whisper-large-v3-turbo`. You can change this by modifying the `model_name` parameter in the `WhisperAudioTranscriber` initialization.
-- **Diarization Model**: The default diarization model is `pyannote/speaker-diarization-3.1`. You can change this by modifying the model loading code in the `PyannoteDiarizer` class.
+- **Diarization Model**: The default diarization model is `pyannote/speaker-diarization-community-1`. You can change this by modifying the model loading code in the `PyannoteDiarizer` class. It segments more finely than `speaker-diarization-3.1`, resolving short interjections the older pipeline absorbed into the surrounding turn.
 
 ## Contributing
 
