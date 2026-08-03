@@ -9,7 +9,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-pytubefix = "^8.12.1"
+pytubefix = ">=8.12.1,<11.0.0"
 feedparser = "^6.0.11"
 requests = "^2.32.4"
 transformers = "^5.5.0"
