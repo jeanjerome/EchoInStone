@@ -2,9 +2,16 @@ import os
 import re
 import logging
 from yt_dlp import YoutubeDL
+from yt_dlp.utils import DownloadError
 from ..capture import DownloaderInterface
 
 logger = logging.getLogger(__name__)
+
+# YouTube intermittently answers a stream request with HTTP 403 even when the
+# preceding extraction succeeded. yt-dlp re-raises any status below 500 instead
+# of retrying, so its own retry options never see these, and the stream URLs are
+# short-lived enough that only a fresh extraction produces working ones.
+DOWNLOAD_ATTEMPTS = 6
 
 class YouTubeDownloader(DownloaderInterface):
     def __init__(self, output_dir='data/videos'):
@@ -37,6 +44,32 @@ class YouTubeDownloader(DownloaderInterface):
             'js_runtimes': {'deno': {}, 'node': {}, 'bun': {}, 'quickjs': {}},
         }
 
+    def _extract(self, url: str, options: dict) -> dict:
+        """
+        Downloads a URL, re-extracting it whenever a stream request is refused.
+
+        Args:
+            url (str): URL to extract and download.
+            options (dict): Options passed to YoutubeDL.
+
+        Returns:
+            dict: The info dictionary of the downloaded media.
+
+        Raises:
+            DownloadError: If every attempt was refused.
+        """
+        for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+            try:
+                with YoutubeDL(options) as ydl:
+                    return ydl.extract_info(url, download=True)
+            except DownloadError as e:
+                if attempt == DOWNLOAD_ATTEMPTS:
+                    raise
+                logger.warning(
+                    f"Download attempt {attempt}/{DOWNLOAD_ATTEMPTS} failed, "
+                    f"retrying with a fresh extraction: {e}"
+                )
+
     def download(self, url: str) -> str:
         """
         Downloads audio from a YouTube URL and converts it to WAV format.
@@ -60,9 +93,7 @@ class YouTubeDownloader(DownloaderInterface):
                 }],
             }
 
-            with YoutubeDL(options) as ydl:
-                info = ydl.extract_info(url, download=True)
-
+            info = self._extract(url, options)
             downloaded_file = info['requested_downloads'][0]['filepath']
 
             # Clean up the file name
