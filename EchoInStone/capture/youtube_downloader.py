@@ -1,8 +1,7 @@
-from pytubefix import YouTube
 import os
 import re
 import logging
-from pydub import AudioSegment
+from yt_dlp import YoutubeDL
 from ..capture import DownloaderInterface
 
 logger = logging.getLogger(__name__)
@@ -17,6 +16,27 @@ class YouTubeDownloader(DownloaderInterface):
         """
         self.output_dir = output_dir
 
+    def _ydl_options(self) -> dict:
+        """
+        Builds the extractor options shared by download and validation.
+
+        YouTube signs its stream URLs with obfuscated JavaScript, so extraction
+        needs a JS runtime to reach the full set of formats. Every runtime
+        yt-dlp supports is enabled and the first one installed is used;
+        without any of them the extractor falls back to clients whose streams
+        YouTube answers with HTTP 403.
+
+        Returns:
+            dict: Options passed to YoutubeDL.
+        """
+        return {
+            'noplaylist': True,
+            'quiet': True,
+            'no_warnings': True,
+            'logger': logger,
+            'js_runtimes': {'deno': {}, 'node': {}, 'bun': {}, 'quickjs': {}},
+        }
+
     def download(self, url: str) -> str:
         """
         Downloads audio from a YouTube URL and converts it to WAV format.
@@ -28,26 +48,31 @@ class YouTubeDownloader(DownloaderInterface):
             str: Path to the saved WAV file if the download and conversion were successful, None otherwise.
         """
         try:
-            yt = YouTube(url)
-            video_stream = yt.streams.filter(only_audio=True).first()
+            os.makedirs(self.output_dir, exist_ok=True)
 
-            # Download the audio file
-            audio_file = video_stream.download(output_path=self.output_dir)
+            options = {
+                **self._ydl_options(),
+                'format': 'bestaudio/best',
+                'outtmpl': os.path.join(self.output_dir, '%(id)s.%(ext)s'),
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'wav',
+                }],
+            }
+
+            with YoutubeDL(options) as ydl:
+                info = ydl.extract_info(url, download=True)
+
+            downloaded_file = info['requested_downloads'][0]['filepath']
 
             # Clean up the file name
-            dir_path, base_name = os.path.split(audio_file)
-            base, ext = os.path.splitext(base_name)
-            safe_base = re.sub(r'[^\w\s-]', '', base).replace(' ', '_')
-            new_file = os.path.join(dir_path, safe_base + '.mp3')
-            os.rename(audio_file, new_file)
-
-            # Convert the file to WAV
-            audio = AudioSegment.from_file(new_file)
+            dir_path = os.path.dirname(downloaded_file)
+            safe_base = re.sub(r'[^\w\s-]', '', info['title']).replace(' ', '_')
             wav_file = os.path.join(dir_path, safe_base + '.wav')
-            audio.export(wav_file, format="wav")
+            os.replace(downloaded_file, wav_file)
 
             logger.info(f"Audio downloaded and converted to {wav_file}")
-            return wav_file
+            return os.path.abspath(wav_file)
         except Exception as e:
             logger.error(f"Error during download: {e}")
             return None
@@ -63,7 +88,8 @@ class YouTubeDownloader(DownloaderInterface):
             bool: True if the URL is a valid YouTube URL, False otherwise.
         """
         try:
-            YouTube(url)
+            with YoutubeDL(self._ydl_options()) as ydl:
+                ydl.extract_info(url, download=False)
             return True
         except Exception:
             logger.warning(f"Invalid YouTube URL: {url}")

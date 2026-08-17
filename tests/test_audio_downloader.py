@@ -27,39 +27,35 @@ class TestAudioDownloader:
             f.write(b'fake mp3 content')
         
         try:
-            # Mock AudioSegment to avoid actual audio processing
-            with patch('EchoInStone.capture.audio_downloader.AudioSegment') as mock_audio:
-                mock_audio_instance = MagicMock()
-                mock_audio.from_file.return_value = mock_audio_instance
-                
+            # Mock the conversion to avoid actual audio processing
+            with patch('EchoInStone.capture.audio_downloader.convert_to_wav') as mock_convert:
                 result = self.downloader.download(test_file)
-                
+
                 # Verify the file was processed
                 assert result is not None
                 assert result.endswith('.wav')
                 assert os.path.isabs(result)
-                
-                # Verify AudioSegment was called correctly
-                mock_audio.from_file.assert_called_once()
-                mock_audio_instance.export.assert_called_once()
+
+                # Verify the conversion was called correctly
+                mock_convert.assert_called_once()
+                source_arg, wav_arg = mock_convert.call_args[0]
+                assert source_arg.endswith('test_input.mp3')
+                assert wav_arg.endswith('test_input.wav')
         finally:
             # Clean up source directory
             if os.path.exists(source_dir):
                 shutil.rmtree(source_dir)
     
     @patch('EchoInStone.capture.audio_downloader.requests')
-    @patch('EchoInStone.capture.audio_downloader.AudioSegment')
-    def test_url_download_and_conversion(self, mock_audio, mock_requests):
+    @patch('EchoInStone.capture.audio_downloader.convert_to_wav')
+    def test_url_download_and_conversion(self, mock_convert, mock_requests):
         """Test downloading and converting an audio file from URL"""
         # Setup mocks
         mock_response = MagicMock()
         mock_response.iter_content.return_value = [b'fake', b'mp3', b'content']
         mock_response.raise_for_status.return_value = None
         mock_requests.get.return_value = mock_response
-        
-        mock_audio_instance = MagicMock()
-        mock_audio.from_file.return_value = mock_audio_instance
-        
+
         test_url = "https://example.com/test.mp3"
         
         # Mock file writing
@@ -77,8 +73,7 @@ class TestAudioDownloader:
             mock_file.assert_called()
             
             # Verify audio conversion
-            mock_audio.from_file.assert_called_once()
-            mock_audio_instance.export.assert_called_once()
+            mock_convert.assert_called_once()
             
             # Verify result
             assert result is not None

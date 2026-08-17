@@ -27,8 +27,8 @@ class TestIntegration:
         assert isinstance(downloader, AudioDownloader)
     
     @patch('EchoInStone.capture.audio_downloader.requests')
-    @patch('EchoInStone.capture.audio_downloader.AudioSegment')
-    def test_rfi_mp3_url_download_process(self, mock_audio, mock_requests):
+    @patch('EchoInStone.capture.audio_downloader.convert_to_wav')
+    def test_rfi_mp3_url_download_process(self, mock_convert, mock_requests):
         """Test that the RFI MP3 URL follows the correct download process"""
         rfi_url = "https://aod-rfi.akamaized.net/rfi/francais/audio/modules/actu/202505/RADIO_FOOT_30-05-25_-_PSG_Reims.mp3"
         
@@ -37,10 +37,7 @@ class TestIntegration:
         mock_response.iter_content.return_value = [b'fake', b'mp3', b'content']
         mock_response.raise_for_status.return_value = None
         mock_requests.get.return_value = mock_response
-        
-        mock_audio_instance = MagicMock()
-        mock_audio.from_file.return_value = mock_audio_instance
-        
+
         # Get downloader and test download
         downloader = get_downloader(rfi_url, self.temp_dir)
         

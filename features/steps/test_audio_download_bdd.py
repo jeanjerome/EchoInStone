@@ -74,18 +74,14 @@ def invalid_audio_url():
 def download_audio_file():
     global result
     with patch('EchoInStone.capture.audio_downloader.requests') as mock_requests, \
-         patch('EchoInStone.capture.audio_downloader.AudioSegment') as mock_audio:
-        
+         patch('EchoInStone.capture.audio_downloader.convert_to_wav'):
+
         # Setup successful response
         mock_response = MagicMock()
         mock_response.iter_content.return_value = [b'fake', b'audio', b'data']
         mock_response.raise_for_status.return_value = None
         mock_requests.get.return_value = mock_response
-        
-        # Setup audio conversion
-        mock_audio_instance = MagicMock()
-        mock_audio.from_file.return_value = mock_audio_instance
-        
+
         with patch('builtins.open', create=True) as mock_open:
             result = downloader.download(url)
 
@@ -94,18 +90,14 @@ def download_audio_file():
 def download_with_headers():
     global result
     with patch('EchoInStone.capture.audio_downloader.requests') as mock_requests, \
-         patch('EchoInStone.capture.audio_downloader.AudioSegment') as mock_audio:
-        
+         patch('EchoInStone.capture.audio_downloader.convert_to_wav'):
+
         # Setup successful response
         mock_response = MagicMock()
         mock_response.iter_content.return_value = [b'fake', b'audio', b'data']
         mock_response.raise_for_status.return_value = None
         mock_requests.get.return_value = mock_response
-        
-        # Setup audio conversion
-        mock_audio_instance = MagicMock()
-        mock_audio.from_file.return_value = mock_audio_instance
-        
+
         with patch('builtins.open', create=True) as mock_open:
             result = downloader.download(url)
             
@@ -126,11 +118,7 @@ def attempt_download_unreachable():
 @when('I copy the local audio file')
 def copy_local_file():
     global result
-    with patch('EchoInStone.capture.audio_downloader.AudioSegment') as mock_audio:
-        # Setup audio conversion
-        mock_audio_instance = MagicMock()
-        mock_audio.from_file.return_value = mock_audio_instance
-        
+    with patch('EchoInStone.capture.audio_downloader.convert_to_wav'):
         result = downloader.download(local_file_path)
 
 

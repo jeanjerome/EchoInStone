@@ -36,21 +36,19 @@ def temp_output_dir() -> str:
 
 
 @pytest.fixture(autouse=True)
-def _stub_audio_segment():
-    """Mock pydub by default so synthetic bytes don't crash ffmpeg.
+def _stub_conversion():
+    """Mock the conversion by default so synthetic bytes don't crash ffmpeg.
 
     Tests that need real conversion behavior can override via their own patch.
     """
-    fake_segment = MagicMock()
 
-    def fake_export(out_path: str, format: str) -> None:  # noqa: A002
-        with open(out_path, "wb") as f:
+    def fake_convert(source_path: str, wav_path: str) -> None:
+        with open(wav_path, "wb") as f:
             f.write(b"RIFF....WAVE")
 
-    fake_segment.export.side_effect = fake_export
     with patch(
-        "EchoInStone.capture.podcast_downloader.AudioSegment.from_file",
-        return_value=fake_segment,
+        "EchoInStone.capture.podcast_downloader.convert_to_wav",
+        side_effect=fake_convert,
     ):
         yield
 
@@ -152,13 +150,9 @@ def test_download_returns_wav_path(temp_output_dir: str) -> None:
     response.content = b"fake-audio-bytes"
     response.raise_for_status = MagicMock()
 
-    fake_segment = MagicMock()
-
-    def fake_export(out_path: str, format: str) -> None:  # noqa: A002 (mirrors pydub API)
-        with open(out_path, "wb") as f:
+    def fake_convert(source_path: str, wav_path: str) -> None:
+        with open(wav_path, "wb") as f:
             f.write(b"RIFF....WAVE")
-
-    fake_segment.export.side_effect = fake_export
 
     with patch(
         "EchoInStone.capture.podcast_downloader.feedparser.parse",
@@ -167,8 +161,8 @@ def test_download_returns_wav_path(temp_output_dir: str) -> None:
         "EchoInStone.capture.podcast_downloader.requests.get",
         return_value=response,
     ), patch(
-        "EchoInStone.capture.podcast_downloader.AudioSegment.from_file",
-        return_value=fake_segment,
+        "EchoInStone.capture.podcast_downloader.convert_to_wav",
+        side_effect=fake_convert,
     ):
         result = downloader.download("https://example.com/feed.xml")
 

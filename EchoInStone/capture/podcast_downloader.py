@@ -4,8 +4,7 @@ import logging
 
 import feedparser
 import requests
-from pydub import AudioSegment
-
+from .audio_conversion import convert_to_wav
 from ..capture import DownloaderInterface
 
 logger = logging.getLogger(__name__)
@@ -31,7 +30,7 @@ class PodcastDownloader(DownloaderInterface):
         """Download the first enclosure of a podcast RSS feed and convert to WAV.
 
         Podcast hosts frequently serve M4A/AAC behind a `.mp3` URL, so the raw
-        bytes are decoded via pydub/ffmpeg and re-encoded to WAV — the format
+        bytes are decoded via ffmpeg and re-encoded to WAV — the format
         consumed uniformly by the transcription and diarization pipelines.
 
         Args:
@@ -62,8 +61,7 @@ class PodcastDownloader(DownloaderInterface):
                             if chunk:
                                 f.write(chunk)
 
-                    audio = AudioSegment.from_file(raw_destination)
-                    audio.export(wav_destination, format="wav")
+                    convert_to_wav(raw_destination, wav_destination)
                     try:
                         os.remove(raw_destination)
                     except OSError:

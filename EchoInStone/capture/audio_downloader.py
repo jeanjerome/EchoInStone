@@ -3,7 +3,7 @@ import shutil
 import logging
 import requests
 from urllib.parse import urlparse
-from pydub import AudioSegment
+from .audio_conversion import convert_to_wav
 from . import DownloaderInterface
 
 logger = logging.getLogger(__name__)
@@ -72,9 +72,8 @@ class AudioDownloader(DownloaderInterface):
                 logger.info(f"File copied to {destination_path}")
             
             # Always convert to WAV for PyAnnote compatibility
-            audio = AudioSegment.from_file(destination_path)
             wav_file = os.path.join(self.output_dir, f"{file_base}.wav")
-            audio.export(wav_file, format="wav")
+            convert_to_wav(destination_path, wav_file)
             logger.info(f"File converted to WAV: {wav_file}")
             
             # Return the absolute path to the WAV file
