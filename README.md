@@ -15,15 +15,25 @@
 
 ### Prerequisites
 
-- Python 3.11 or 3.12
+- Python 3.12 or 3.13
 - Poetry (dependency management tool)
 - ffmpeg (required for audio processing)
+- A JavaScript runtime — `deno`, `node`, `bun` or `quickjs` (required for YouTube downloads)
 
 > Note: `ffmpeg` must be installed and available in your system's PATH.  
 > You can install it via your package manager:
 > - On macOS: `brew install ffmpeg`
 > - On Ubuntu/Debian: `sudo apt install ffmpeg`
 > - On Windows: Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+
+> Note: YouTube signs its stream URLs with obfuscated JavaScript and forces SABR streaming on
+> the clients that skip the challenge, so a JS runtime must be installed and available in your
+> system's PATH to download from YouTube. Any one of `deno`, `node`, `bun` or `quickjs` will do;
+> the first one found is used. Without one, extraction falls back to clients whose streams
+> YouTube rejects with HTTP 403. The challenge scripts themselves ship with the `yt-dlp-ejs`
+> dependency, so no further setup is needed.
+> - On macOS: `brew install deno`
+> - On Ubuntu/Debian: `sudo apt install nodejs`
 
 ### Steps
 
@@ -171,7 +181,7 @@ All tests are designed to prevent regressions and ensure that the audio download
 
 ### Continuous Integration
 
-Every pull request runs `.github/workflows/ci.yml`: lock file consistency (`poetry check --lock`), unit tests on Python 3.11 and 3.12, and the BDD suite. The BDD suite runs as its own job because it downloads the Whisper weights; both the virtualenv and the model cache are keyed so repeat runs stay cheap.
+Every pull request runs `.github/workflows/ci.yml`: lock file consistency (`poetry check --lock`), unit tests on Python 3.12 and 3.13, and the BDD suite. The BDD suite runs as its own job because it downloads the Whisper weights; both the virtualenv and the model cache are keyed so repeat runs stay cheap.
 
 ## Configuration
 
