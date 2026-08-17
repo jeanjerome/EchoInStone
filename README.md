@@ -15,7 +15,7 @@
 
 ### Prerequisites
 
-- Python 3.11, 3.12 or 3.13
+- Python 3.12 or 3.13
 - Poetry (dependency management tool)
 - ffmpeg (required for audio processing)
 - A JavaScript runtime — `deno`, `node`, `bun` or `quickjs` (required for YouTube downloads)
@@ -181,7 +181,7 @@ All tests are designed to prevent regressions and ensure that the audio download
 
 ### Continuous Integration
 
-Every pull request runs `.github/workflows/ci.yml`: lock file consistency (`poetry check --lock`), unit tests on Python 3.11 and 3.12, and the BDD suite. The BDD suite runs as its own job because it downloads the Whisper weights; both the virtualenv and the model cache are keyed so repeat runs stay cheap.
+Every pull request runs `.github/workflows/ci.yml`: lock file consistency (`poetry check --lock`), unit tests on Python 3.12 and 3.13, and the BDD suite. The BDD suite runs as its own job because it downloads the Whisper weights; both the virtualenv and the model cache are keyed so repeat runs stay cheap.
 
 ## Configuration
 
